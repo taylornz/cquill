@@ -26,8 +26,8 @@ pub(crate) async fn select_all(
     cql_dir: &Path,
 ) -> Result<Vec<CqlFile>, QueryError> {
     let cql = format!("select id, name, hash, ver from {keyspace}.{table}");
-    let query_result = session.query(cql, ()).await?;
-    let mut result = Vec::new();
+    let query_result: scylla::QueryResult = session.query(cql, ()).await?;
+    let mut result: Vec<CqlFile> = Vec::new();
     if let Some(rows) = query_result.rows {
         for row_result in rows.into_typed::<(Uuid, String, String, i16)>() {
             let row_values = row_result.unwrap();

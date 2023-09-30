@@ -95,6 +95,7 @@ impl TestHarness {
     pub fn migrate_args(&self) -> MigrateArgs {
         MigrateArgs {
             cql_dir: self.cql_dir.clone(),
+            apply_keyspace: "test-keyspace".to_string(),
             history_keyspace: self.cquill_keyspace.clone(),
             history_table: self.cquill_table.clone(),
         }

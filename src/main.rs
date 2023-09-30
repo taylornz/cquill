@@ -31,6 +31,8 @@ struct MigrateCliArgs {
     history_replication: String,
     #[clap(long, value_name = "HISTORY_TABLE", default_value = cquill::TABLE)]
     history_table: String,
+    #[clap(long, value_name = "APPLY_KEYSPACE", default_value = "replace_me")]
+    apply_keyspace: String,
 }
 
 impl MigrateCliArgs {
@@ -42,6 +44,7 @@ impl MigrateCliArgs {
         MigrateOpts {
             cassandra_opts: Some(CassandraOpts::default()),
             cql_dir: self.cql_dir.clone(),
+            apply_keyspace: self.apply_keyspace.clone(),
             history_keyspace: Some(KeyspaceOpts {
                 name: self.history_keyspace.clone(),
                 replication: Some(replication_factor),
@@ -71,7 +74,13 @@ async fn migrate(args: MigrateCliArgs) {
                 error_state,
                 cquill_keyspace,
                 cquill_table,
-            } => history_update_failed_exit(error_state.deref(), cquill_keyspace, cquill_table),
+                apply_keyspace,
+            } => history_update_failed_exit(
+                error_state.deref(),
+                cquill_keyspace,
+                cquill_table,
+                apply_keyspace,
+            ),
             PartialMigration { error_state } => partial_migrate_error_exit(error_state.deref()),
             _ => error_exit(err),
         },
@@ -103,6 +112,7 @@ fn history_update_failed_exit(
     error_state: &MigrateErrorState,
     cquill_keyspace: String,
     cquill_table: String,
+    apply_keyspace: String,
 ) {
     if !error_state.migrated.is_empty() {
         print_migrated_cql(&error_state.migrated);
@@ -114,8 +124,8 @@ fn history_update_failed_exit(
     println!("{} {}", error_prefix(), error_state.error);
     println!("\n===IMPORTANT===");
     println!(
-        "`cquill migrate` must not be run until {} is added to the {}.{} history table.",
-        error_state.failed_file, cquill_keyspace, cquill_table,
+        "`cquill migrate` must not be run until {} is added to the {}.{} history table. with apply keyspace {:?}",
+        error_state.failed_file, cquill_keyspace, cquill_table, apply_keyspace,
     );
     println!("===============");
 }

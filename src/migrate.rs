@@ -22,11 +22,13 @@ pub enum MigrateError {
         filename: String,
         cquill_keyspace: String,
         cquill_table: String,
+        apply_keyspace: String,
     },
     #[error("errored saving migrate status of '{0}' to {cquill_keyspace}.{cquill_table}: {1}", error_state.failed_file.filename, error_state.error)]
     HistoryUpdateFailed {
         cquill_keyspace: String,
         cquill_table: String,
+        apply_keyspace: String,
         error_state: Box<MigrateErrorState>,
     },
     #[error("errored during migrate of '{0}': {1}", error_state.failed_file.filename, error_state.error)]
@@ -48,6 +50,7 @@ pub struct MigrateErrorState {
 
 pub(crate) struct MigrateArgs {
     pub cql_dir: PathBuf,
+    pub apply_keyspace: String,
     pub history_keyspace: String,
     pub history_table: String,
 }
@@ -76,15 +79,20 @@ pub(crate) async fn perform(
                     filename: cql_file.filename.clone(),
                     cquill_keyspace: args.history_keyspace.clone(),
                     cquill_table: args.history_table.clone(),
+                    apply_keyspace: args.apply_keyspace.clone(),
                 });
             }
         }
-        let cql = cql_file.read_statements()?;
+        let cql = cql_file.read_statements(args.apply_keyspace.clone())?;
         not_migrated.push((cql_file.clone(), cql));
     }
     let mut migrated: Vec<CqlFile> = Vec::new();
     for cql in not_migrated {
         for cql_statement in cql.1 {
+            // let env_statement = CqlStatement {
+            //     cql: cql_statement.cql.replace("%%KEYSPACE%%", "grla_dev"),
+            //     lines: (cql_statement.lines),
+            // };
             if let Err(err) = queries::exec(session, cql_statement.cql.clone()).await {
                 return Err(MigrateError::PartialMigration {
                     error_state: Box::from(MigrateErrorState {
@@ -114,6 +122,7 @@ pub(crate) async fn perform(
                 }),
                 cquill_keyspace: args.history_keyspace,
                 cquill_table: args.history_table,
+                apply_keyspace: args.apply_keyspace.clone(),
             });
         };
     }

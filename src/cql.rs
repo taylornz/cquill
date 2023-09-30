@@ -62,7 +62,10 @@ impl CqlFile {
         })
     }
 
-    pub(crate) fn read_statements(&self) -> Result<Vec<CqlStatement>, MigrateError> {
+    pub(crate) fn read_statements(
+        &self,
+        apply_keyspace: String,
+    ) -> Result<Vec<CqlStatement>, MigrateError> {
         let cql = match fs::read_to_string(&self.path) {
             Err(err) => {
                 return Err(MigrateError::CqlFileReadError {
@@ -151,7 +154,12 @@ impl CqlFile {
         Ok(statements
             .iter()
             .map(|statement| CqlStatement {
-                cql: statement.cql.lines().map(|l| l.trim()).collect(),
+                cql: statement
+                    .cql
+                    .lines()
+                    .map(|l| l.trim())
+                    .map(|l: &str| l.replace("%%KEYSPACE%%", apply_keyspace.as_str()))
+                    .collect(),
                 lines: statement.lines,
             })
             .collect())
@@ -252,6 +260,7 @@ mod tests {
             cql_file_path.clone(),
             "  create table big_business_data (id timeuuid primary key)  ;",
         );
+        let apply_keyspace = "test_keyspace".to_string();
 
         match CqlFile::from_path(cql_file_path) {
             Err(_) => panic!(),
@@ -259,7 +268,7 @@ mod tests {
                 assert_eq!(cql_file.filename, String::from("v073-more_tables.cql"));
                 assert_eq!(cql_file.version, 73);
                 assert_eq!(cql_file.hash, "e995c628cf1a06863dc86760020ecb43");
-                let statements_result = cql_file.read_statements();
+                let statements_result = cql_file.read_statements(apply_keyspace.clone());
                 assert!(statements_result.is_ok());
                 let statements = statements_result.unwrap();
                 assert_eq!(statements.len(), 1);
@@ -276,7 +285,7 @@ mod tests {
         let cql_file_path = temp_dir.path().join("v001-no_more_tests.cql");
         make_file(cql_file_path.clone(), cql);
         let cql_file = CqlFile::from_path(cql_file_path).expect("cql file");
-        let statements_result = cql_file.read_statements();
+        let statements_result = cql_file.read_statements("test_keyspace".to_string());
         assert!(statements_result.is_ok());
         let statements = statements_result.unwrap();
         assert_eq!(statements.len(), expected.len());

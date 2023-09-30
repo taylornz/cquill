@@ -24,6 +24,7 @@ pub const TABLE: &str = "migrated_cql";
 pub struct MigrateOpts {
     pub cassandra_opts: Option<CassandraOpts>,
     pub cql_dir: PathBuf,
+    pub apply_keyspace: String,
     pub history_keyspace: Option<KeyspaceOpts>,
     pub history_table: Option<String>,
 }
@@ -67,6 +68,7 @@ pub async fn migrate_cql(opts: MigrateOpts) -> Result<Vec<CqlFile>, MigrateError
         &cql_files,
         migrate::MigrateArgs {
             cql_dir: opts.cql_dir,
+            apply_keyspace: opts.apply_keyspace,
             history_keyspace: cquill_keyspace.name,
             history_table,
         },

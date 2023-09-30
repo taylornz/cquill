@@ -8,6 +8,7 @@ async fn main() {
     let opts = MigrateOpts {
         cassandra_opts: None,
         cql_dir: PathBuf::from("examples/cql"),
+        apply_keyspace: "mykeyspace".to_string(),
         history_keyspace: None,
         history_table: None,
     };

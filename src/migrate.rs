@@ -93,6 +93,7 @@ pub(crate) async fn perform(
             //     cql: cql_statement.cql.replace("%%KEYSPACE%%", "grla_dev"),
             //     lines: (cql_statement.lines),
             // };
+            println!("APPLYING {}", cql_statement.cql);
             if let Err(err) = queries::exec(session, cql_statement.cql.clone()).await {
                 return Err(MigrateError::PartialMigration {
                     error_state: Box::from(MigrateErrorState {
